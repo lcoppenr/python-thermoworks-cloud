@@ -18,6 +18,24 @@ class BigQueryInfo:
 
 
 @dataclass
+class FanInfo:
+    """FanInfo contains information about the fan for a Signals BBQ device."""
+
+    set_temp: Optional[int] = field(
+        default=None, metadata={"api_name": "setTemp", "firestore_type": "integerValue", "converter": int})
+    state: Optional[int] = field(
+        default=None, metadata={"firestore_type": "integerValue", "converter": int})
+    connected: Optional[bool] = field(
+        default=None, metadata={"firestore_type": "booleanValue"})
+    connection: Optional[bool] = field(
+        default=None, metadata={"firestore_type": "booleanValue"})
+    alarm: Optional[bool] = field(
+        default=None, metadata={"firestore_type": "booleanValue"})
+    alarming: Optional[bool] = field(
+        default=None, metadata={"firestore_type": "booleanValue"})
+
+
+@dataclass
 class Device:  # pylint: disable=too-many-instance-attributes
     """Device contains information about a Thermoworks device.
 
@@ -95,9 +113,19 @@ class Device:  # pylint: disable=too-many-instance-attributes
     last_bluetooth_connection: Optional[datetime] = field(
         default=None,
         metadata={"firestore_type": "timestampValue", "converter": parse_datetime})
+    fan: Optional[FanInfo] = None
     session_start: Optional[datetime] = field(
         default=None,
-        metadata={"firestore_type": "timestampValue", "converter": parse_datetime})
+        metadata={"api_name": "sessionStart", "firestore_type": "timestampValue", "converter": parse_datetime})
+    session_label: Optional[str] = field(
+        default=None, metadata={"api_name": "sessionLabel", "firestore_type": "stringValue"})
+    latest_reading: Optional[datetime] = field(
+        default=None,
+        metadata={"api_name": "latestReading", "firestore_type": "timestampValue", "converter": parse_datetime})
+    connected_ssid: Optional[str] = field(
+        default=None, metadata={"api_name": "connectedSSID", "firestore_type": "stringValue"})
+    iot_core_device_blocked: Optional[bool] = field(
+        default=None, metadata={"api_name": "iotCoreDeviceBlocked", "firestore_type": "booleanValue"})
     create_time: Optional[datetime] = None
     update_time: Optional[datetime] = None
 
@@ -117,6 +145,13 @@ def _document_to_device(document: dict) -> Device:
                 fields["bigQuery"]["mapValue"], BigQueryInfo)
         except (KeyError, TypeError):
             device.big_query_info = None
+
+    # Handle Fan info separately since it's a nested object
+    if "fan" in fields and "mapValue" in fields["fan"]:
+        try:
+            device.fan = parse_nested_object(fields["fan"]["mapValue"], FanInfo)
+        except (KeyError, TypeError):
+            device.fan = None
 
     # Document timestamps
     if "createTime" in document:

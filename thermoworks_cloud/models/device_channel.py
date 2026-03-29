@@ -31,6 +31,28 @@ class Alarm:
     """"The units as a string like "F", "C", or "H" (for humidity)"""
     units: Optional[str] = field(default=None, metadata={
                                  "firestore_type": "stringValue"})
+    muted: Optional[bool] = field(
+        default=None, metadata={"firestore_type": "booleanValue"})
+    last_notified: Optional[datetime] = field(
+        default=None,
+        metadata={"api_name": "lastNotified", "firestore_type": "timestampValue", "converter": parse_datetime})
+
+
+@dataclass
+class RecentReading:
+    """A recent reading on a device channel."""
+
+    ts: Optional[str] = field(default=None, metadata={"firestore_type": "stringValue"})
+    v: Optional[str] = field(default=None, metadata={"firestore_type": "stringValue"})
+    u: Optional[str] = field(default=None, metadata={"firestore_type": "stringValue"})
+
+
+@dataclass
+class Trim:
+    """Trim/calibration information for a device channel."""
+
+    value: Optional[float] = field(default=None, metadata={"firestore_type": "doubleValue"})
+    unit: Optional[str] = field(default=None, metadata={"firestore_type": "stringValue"})
 
 
 @dataclass
@@ -98,6 +120,22 @@ class DeviceChannel:  # pylint: disable=too-many-instance-attributes
             "firestore_type": "booleanValue"
         }
     )
+    color: Optional[str] = field(default=None, metadata={
+                                 "firestore_type": "stringValue"})
+    rate_of_change: Optional[float] = field(
+        default=None, metadata={"api_name": "rateOfChange", "firestore_type": "doubleValue"})
+    rate_of_change_unit: Optional[str] = field(
+        default=None, metadata={"api_name": "rateOfChangeUnit", "firestore_type": "stringValue"})
+    estimated_alarm_status: Optional[str] = field(
+        default=None, metadata={"api_name": "estimatedAlarmStatus", "firestore_type": "stringValue"})
+    enabled: Optional[bool] = field(
+        default=None, metadata={"firestore_type": "booleanValue"})
+    calibration: Optional[float] = field(
+        default=None, metadata={"firestore_type": "doubleValue"})
+    calibration_unit: Optional[str] = field(
+        default=None, metadata={"api_name": "calibrationUnit", "firestore_type": "stringValue"})
+    trim: Optional[Trim] = None
+    recent_readings: Optional[list] = None
 
     # Dictionary to store any additional properties not explicitly defined
     additional_properties: Optional[Dict] = None
@@ -146,6 +184,27 @@ def _document_to_device_channel(document: dict) -> DeviceChannel:
         if "maximum" in fields and "mapValue" in fields["maximum"]:
             device_channel.maximum = _parse_min_max_reading(
                 fields["maximum"]["mapValue"])
+
+        # Handle trim field (nested map)
+        if "trim" in fields and "mapValue" in fields["trim"]:
+            device_channel.trim = parse_nested_object(
+                fields["trim"]["mapValue"], Trim)
+
+        # Handle recent_readings field (array of maps)
+        if "recentReadings" in fields and "arrayValue" in fields["recentReadings"]:
+            readings = []
+            for item in fields["recentReadings"]["arrayValue"].get("values", []):
+                if "mapValue" in item:
+                    r = RecentReading()
+                    item_fields = item["mapValue"].get("fields", {})
+                    if "ts" in item_fields:
+                        r.ts = item_fields["ts"].get("stringValue")
+                    if "v" in item_fields:
+                        r.v = item_fields["v"].get("stringValue")
+                    if "u" in item_fields:
+                        r.u = item_fields["u"].get("stringValue")
+                    readings.append(r)
+            device_channel.recent_readings = readings
 
     except (KeyError, TypeError, ValueError) as _:
         # If there's an error parsing a specific field, continue with what we have
