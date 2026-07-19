@@ -762,115 +762,35 @@ GET_DEVICE_CHANNEL_RESPONSE_INT = json.loads(
 }"""
 )
 
-GET_RFX_AIR_PROBE_CHANNEL_RESPONSE = json.loads(
-    """
-{
-  "name": "projects/test-project-name/databases/(default)/documents/devices/test-device/channels/1",
-  "fields": {
-    "lastTelemetrySaved": {
-      "timestampValue": "2026-07-16T15:09:07.706Z"
-    },
-    "value": {
-      "doubleValue": 73.0999984741211
-    },
-    "calibration": {
-      "integerValue": "0"
-    },
-    "color": {
-      "stringValue": "none"
-    },
-    "enabled": {
-      "booleanValue": true
-    },
+GET_RFX_AIR_PROBE_CHANNEL_RESPONSE = deepcopy(GET_DEVICE_CHANNEL_RESPONSE)
+GET_RFX_AIR_PROBE_CHANNEL_RESPONSE["fields"].update({
+    "lastTelemetrySaved": {"timestampValue": "2026-07-16T15:09:07.706Z"},
+    "value": {"doubleValue": 73.0999984741211},
+    "calibration": {"integerValue": "0"},
+    "enabled": {"booleanValue": True},
     "estimatedAlarmStatus": {
-      "stringValue": "Alarm needs to be set to calculate estimated time"
+        "stringValue": "Alarm needs to be set to calculate estimated time"
     },
-    "showRateOfChange": {
-      "booleanValue": true
-    },
-    "units": {
-      "stringValue": "F"
-    },
-    "status": {
-      "stringValue": "LOW"
-    },
-    "type": {
-      "stringValue": "Pro-Series"
-    },
-    "label": {
-      "stringValue": "Grid Temperature"
-    },
-    "lastSeen": {
-      "timestampValue": "2026-07-16T15:09:08.361Z"
-    },
-    "alarmHigh": {
-      "mapValue": {
-        "fields": {
-          "enabled": {
-            "booleanValue": true
-          },
-          "units": {
-            "stringValue": "F"
-          },
-          "alarming": {
-            "booleanValue": false
-          },
-          "value": {
-            "integerValue": "175"
-          }
-        }
-      }
-    },
-    "number": {
-      "stringValue": "1"
-    },
-    "maximum": {
-      "mapValue": {
-        "fields": {
-          "reading": {
-            "mapValue": {
-              "fields": {
-                "value": {
-                  "doubleValue": 76.8000030517578
-                },
-                "units": {
-                  "stringValue": "F"
-                }
-              }
-            }
-          },
-          "dateReading": {
-            "timestampValue": "2026-06-12T13:06:13.204Z"
-          }
-        }
-      }
-    },
-    "alarmLow": {
-      "mapValue": {
-        "fields": {
-          "enabled": {
-            "booleanValue": true
-          },
-          "units": {
-            "stringValue": "F"
-          },
-          "alarming": {
-            "booleanValue": true
-          },
-          "value": {
-            "integerValue": "125"
-          }
-        }
-      }
-    },
-    "showAvgTemp": {
-      "booleanValue": true
-    }
-  },
-  "createTime": "2019-01-01T00:00:00.000Z",
-  "updateTime": "2021-01-01T00:00:00.000Z"
-}"""
-)
+    "showRateOfChange": {"booleanValue": True},
+    "status": {"stringValue": "LOW"},
+    "type": {"stringValue": "Pro-Series"},
+    "label": {"stringValue": "Grid Temperature"},
+    "lastSeen": {"timestampValue": "2026-07-16T15:09:08.361Z"},
+})
+GET_RFX_AIR_PROBE_CHANNEL_RESPONSE["fields"]["alarmHigh"]["mapValue"]["fields"].update({
+    "value": {"integerValue": "175"},
+    "alarming": {"booleanValue": False},
+})
+GET_RFX_AIR_PROBE_CHANNEL_RESPONSE["fields"]["alarmLow"]["mapValue"]["fields"].update({
+    "value": {"integerValue": "125"},
+    "alarming": {"booleanValue": True},
+})
+GET_RFX_AIR_PROBE_CHANNEL_RESPONSE["fields"]["maximum"]["mapValue"]["fields"][
+    "reading"
+]["mapValue"]["fields"]["value"] = {"doubleValue": 76.8000030517578}
+GET_RFX_AIR_PROBE_CHANNEL_RESPONSE["fields"]["maximum"]["mapValue"]["fields"][
+    "dateReading"
+] = {"timestampValue": "2026-06-12T13:06:13.204Z"}
 
 # Response for get_devices query - using sanitized real-world format
 GET_DEVICES_RESPONSE = [

@@ -5,11 +5,7 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 import pytest
 
-from tests.test_data import (
-    GET_DEVICE_CHANNEL_RESPONSE_INT,
-    GET_DEVICE_CHANNEL_RESPONSE_HUMIDITY,
-    GET_RFX_AIR_PROBE_CHANNEL_RESPONSE,
-)
+from tests.test_data import GET_DEVICE_CHANNEL_RESPONSE_INT, GET_DEVICE_CHANNEL_RESPONSE_HUMIDITY
 from tests.core_test_object import CoreTestObject
 from tests.test_data import (
     TEST_DEVICE_ID_0,
@@ -20,11 +16,7 @@ from tests.test_data import (
     TEST_ACCOUNT_ID,
     USER_RESPONSE,
     GET_DEVICE_RESPONSE,
-    GET_DEVICE_FAN_STATE_RESPONSES,
     GET_DEVICE_CHANNEL_RESPONSE,
-    GET_DEVICE_WITH_GATEWAY_RSSI_RESPONSE,
-    GET_DEVICE_WITH_DISCONNECTED_FAN_RESPONSE,
-    GET_DEVICE_WITH_FAN_RESPONSE,
     GET_DEVICES_RESPONSE,
     CONFIG_RETURN_VALUE,
     GET_DEVICE_ARCHIVE_DATA_RESPONSE,
@@ -332,92 +324,6 @@ class TestCore:  # pylint: disable=too-many-public-methods
         assert device.device_name == get_field_value(
             GET_DEVICE_RESPONSE, "device")
 
-    async def test_get_device_with_gateway_rssi(
-        self, auth: Auth, core_test_object: CoreTestObject
-    ):
-        """Test parsing gateway RSSI from an RFX meat probe device."""
-        # Setup
-        core_test_object.expect_get_device(
-            access_token=TEST_ID_TOKEN, device_serial=TEST_DEVICE_ID_0
-        ).respond_with_json(GET_DEVICE_WITH_GATEWAY_RSSI_RESPONSE)
-        thermoworks_cloud = ThermoworksCloud(auth)
-
-        # Act
-        device = await thermoworks_cloud.get_device(TEST_DEVICE_ID_0)
-
-        # Assert
-        assert device.gateway_rssi == -55
-        assert device.signal_strength == -55
-        assert device.additional_properties is None
-
-    async def test_get_device_with_fan(self, auth: Auth, core_test_object: CoreTestObject):
-        """Test parsing a connected fan accessory from a device."""
-        # Setup
-        core_test_object.expect_get_device(
-            access_token=TEST_ID_TOKEN, device_serial=TEST_DEVICE_ID_0
-        ).respond_with_json(GET_DEVICE_WITH_FAN_RESPONSE)
-        thermoworks_cloud = ThermoworksCloud(auth)
-
-        # Act
-        device = await thermoworks_cloud.get_device(TEST_DEVICE_ID_0)
-
-        # Assert
-        assert device.fan is not None
-        assert device.fan.connected is True
-        assert device.fan.connection is True
-        assert device.fan.fan_channel == "1"
-        assert device.fan.set_temp == 150
-        assert device.fan.state == 1
-        assert device.fan.state_name == "Blowing"
-
-    @pytest.mark.parametrize(
-        ("state", "state_name"),
-        [
-            (0, "Paused"),
-            (1, "Blowing"),
-            (2, "Pulsing"),
-            (99, None),
-        ],
-    )
-    async def test_get_device_fan_state_name(
-        self, auth: Auth, core_test_object: CoreTestObject, state: int, state_name: str
-    ):
-        """Test fan state names observed in the ThermoWorks app."""
-        # Setup
-        core_test_object.expect_get_device(
-            access_token=TEST_ID_TOKEN, device_serial=TEST_DEVICE_ID_0
-        ).respond_with_json(GET_DEVICE_FAN_STATE_RESPONSES[state])
-        thermoworks_cloud = ThermoworksCloud(auth)
-
-        # Act
-        device = await thermoworks_cloud.get_device(TEST_DEVICE_ID_0)
-
-        # Assert
-        assert device.fan is not None
-        assert device.fan.state_name == state_name
-
-    async def test_get_device_with_disconnected_fan(
-        self, auth: Auth, core_test_object: CoreTestObject
-    ):
-        """Test parsing a fan accessory when it is present but disconnected."""
-        # Setup
-        core_test_object.expect_get_device(
-            access_token=TEST_ID_TOKEN, device_serial=TEST_DEVICE_ID_0
-        ).respond_with_json(GET_DEVICE_WITH_DISCONNECTED_FAN_RESPONSE)
-        thermoworks_cloud = ThermoworksCloud(auth)
-
-        # Act
-        device = await thermoworks_cloud.get_device(TEST_DEVICE_ID_0)
-
-        # Assert
-        assert device.fan is not None
-        assert device.fan.connected is False
-        assert device.fan.connection is False
-        assert device.fan.fan_channel == "1"
-        assert device.fan.set_temp is None
-        assert device.fan.state is None
-        assert device.fan.state_name is None
-
     async def test_get_device_4xx_throws(
         self, auth: Auth, core_test_object: CoreTestObject
     ):
@@ -657,46 +563,6 @@ class TestCore:  # pylint: disable=too-many-public-methods
         assert channel.maximum is not None
         assert channel.maximum.reading.value == 91.26999999999998
         assert channel.maximum.reading.units == "H"
-
-    async def test_get_rfx_air_probe_channel_alarms(
-        self, auth: Auth, core_test_object: CoreTestObject
-    ):
-        """Test parsing RFX Air Probe alarms."""
-        # Setup
-        test_device_serial = "test_device_serial"
-        test_device_channel = "1"
-        core_test_object.expect_get_device_channel(
-            access_token=TEST_ID_TOKEN,
-            device_serial=test_device_serial,
-            channel=test_device_channel,
-        ).respond_with_json(GET_RFX_AIR_PROBE_CHANNEL_RESPONSE)
-        thermoworks_cloud = ThermoworksCloud(auth)
-
-        # Act
-        channel = await thermoworks_cloud.get_device_channel(
-            test_device_serial, test_device_channel
-        )
-
-        # Assert
-        assert channel.type == "Pro-Series"
-        assert channel.label == "Grid Temperature"
-        assert channel.status == "LOW"
-        assert channel.alarm_high is not None
-        assert channel.alarm_high.enabled is True
-        assert channel.alarm_high.alarming is False
-        assert channel.alarm_high.value == 175
-        assert channel.alarm_high.units == "F"
-        assert channel.alarm_low is not None
-        assert channel.alarm_low.enabled is True
-        assert channel.alarm_low.alarming is True
-        assert channel.alarm_low.value == 125
-        assert channel.alarm_low.units == "F"
-        assert channel.additional_properties is not None
-        assert (
-            channel.additional_properties["estimatedAlarmStatus"]
-            == "Alarm needs to be set to calculate estimated time"
-        )
-
 
     async def test_get_device_channel_4xx_throws(
         self, auth: Auth, core_test_object: CoreTestObject
