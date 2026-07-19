@@ -397,6 +397,16 @@ GET_DEVICE_FAN_STATE_RESPONSES = {
 }
 
 
+GET_DEVICE_WITH_GATEWAY_RSSI_RESPONSE = deepcopy(GET_DEVICE_RESPONSE)
+GET_DEVICE_WITH_GATEWAY_RSSI_RESPONSE["fields"]["type"] = {"stringValue": "rfx"}
+GET_DEVICE_WITH_GATEWAY_RSSI_RESPONSE["fields"]["device"] = {
+    "stringValue": "rfx meat"
+}
+GET_DEVICE_WITH_GATEWAY_RSSI_RESPONSE["fields"]["gatewayRSSI"] = {
+    "stringValue": "-55"
+}
+
+
 # Actual response value structure
 GET_DEVICE_CHANNEL_RESPONSE = json.loads(
     """

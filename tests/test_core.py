@@ -18,6 +18,7 @@ from tests.test_data import (
     GET_DEVICE_RESPONSE,
     GET_DEVICE_FAN_STATE_RESPONSES,
     GET_DEVICE_CHANNEL_RESPONSE,
+    GET_DEVICE_WITH_GATEWAY_RSSI_RESPONSE,
     GET_DEVICE_WITH_DISCONNECTED_FAN_RESPONSE,
     GET_DEVICE_WITH_FAN_RESPONSE,
     GET_DEVICES_RESPONSE,
@@ -315,6 +316,7 @@ class TestCore:  # pylint: disable=too-many-public-methods
         assert device.wifi_strength == int(
             get_field_value(GET_DEVICE_RESPONSE, "wifi_stength")
         )
+        assert device.signal_strength == device.wifi_strength
         assert device.recording_interval_in_seconds == int(
             get_field_value(GET_DEVICE_RESPONSE, "recordingIntervalInSeconds")
         )
@@ -325,6 +327,24 @@ class TestCore:  # pylint: disable=too-many-public-methods
         )
         assert device.device_name == get_field_value(
             GET_DEVICE_RESPONSE, "device")
+
+    async def test_get_device_with_gateway_rssi(
+        self, auth: Auth, core_test_object: CoreTestObject
+    ):
+        """Test parsing gateway RSSI from an RFX meat probe device."""
+        # Setup
+        core_test_object.expect_get_device(
+            access_token=TEST_ID_TOKEN, device_serial=TEST_DEVICE_ID_0
+        ).respond_with_json(GET_DEVICE_WITH_GATEWAY_RSSI_RESPONSE)
+        thermoworks_cloud = ThermoworksCloud(auth)
+
+        # Act
+        device = await thermoworks_cloud.get_device(TEST_DEVICE_ID_0)
+
+        # Assert
+        assert device.gateway_rssi == -55
+        assert device.signal_strength == -55
+        assert device.additional_properties is None
 
     async def test_get_device_with_fan(self, auth: Auth, core_test_object: CoreTestObject):
         """Test parsing a connected fan accessory from a device."""

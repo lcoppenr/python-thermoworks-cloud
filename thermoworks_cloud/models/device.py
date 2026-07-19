@@ -107,6 +107,14 @@ class Device:  # pylint: disable=too-many-instance-attributes
             "firestore_type": "integerValue", "converter": int
         }
     )
+    gateway_rssi: Optional[int] = field(
+        default=None,
+        metadata={
+            "api_name": "gatewayRSSI",
+            "firestore_type": ["integerValue", "stringValue"],
+            "converter": int,
+        }
+    )
     recording_interval_in_seconds: Optional[int] = field(
         default=None, metadata={"firestore_type": "integerValue", "converter": int})
     transmit_interval_in_seconds: Optional[int] = field(
@@ -143,6 +151,11 @@ class Device:  # pylint: disable=too-many-instance-attributes
 
     # Dictionary to store any additional properties not explicitly defined
     additional_properties: Optional[Dict] = None
+
+    @property
+    def signal_strength(self) -> Optional[int]:
+        """Return gateway RSSI when present, otherwise Wi-Fi strength, in dBm."""
+        return self.gateway_rssi if self.gateway_rssi is not None else self.wifi_strength
 
 
 def _document_to_device(document: dict) -> Device:
