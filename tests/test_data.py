@@ -1,5 +1,6 @@
 """Test data to be used with mocks"""
 
+from copy import deepcopy
 import json
 
 # Paths used by the AuthFactory to setup an authentication object
@@ -352,6 +353,49 @@ GET_DEVICE_RESPONSE = json.loads(
 }"""
     % (TEST_DEVICE_ID_0, TEST_DEVICE_ID_0, TEST_DEVICE_ID_0, TEST_DEVICE_ID_0)
 )
+
+
+def _device_response_with_fan(fan_fields: dict, device_type: str = "datalogger") -> dict:
+    """Return a device response containing fan accessory data."""
+    response = deepcopy(GET_DEVICE_RESPONSE)
+    response["fields"]["type"] = {"stringValue": device_type}
+    response["fields"]["fan"] = {
+        "mapValue": {
+            "fields": fan_fields
+        }
+    }
+    return response
+
+
+GET_DEVICE_WITH_FAN_RESPONSE = _device_response_with_fan(
+    {
+        "connected": {"booleanValue": True},
+        "connection": {"booleanValue": True},
+        "fan_channel": {"stringValue": "1"},
+        "setTemp": {"integerValue": "150"},
+        "state": {"integerValue": "1"},
+    },
+    device_type="rfx",
+)
+
+GET_DEVICE_WITH_DISCONNECTED_FAN_RESPONSE = _device_response_with_fan(
+    {
+        "connected": {"booleanValue": False},
+        "connection": {"booleanValue": False},
+        "fan_channel": {"stringValue": "1"},
+    }
+)
+
+GET_DEVICE_FAN_STATE_RESPONSES = {
+    state: _device_response_with_fan(
+        {
+            "connected": {"booleanValue": True},
+            "state": {"integerValue": str(state)},
+        }
+    )
+    for state in (0, 1, 2, 99)
+}
+
 
 # Actual response value structure
 GET_DEVICE_CHANNEL_RESPONSE = json.loads(

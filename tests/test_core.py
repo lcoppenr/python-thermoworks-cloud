@@ -16,7 +16,10 @@ from tests.test_data import (
     TEST_ACCOUNT_ID,
     USER_RESPONSE,
     GET_DEVICE_RESPONSE,
+    GET_DEVICE_FAN_STATE_RESPONSES,
     GET_DEVICE_CHANNEL_RESPONSE,
+    GET_DEVICE_WITH_DISCONNECTED_FAN_RESPONSE,
+    GET_DEVICE_WITH_FAN_RESPONSE,
     GET_DEVICES_RESPONSE,
     CONFIG_RETURN_VALUE,
     GET_DEVICE_ARCHIVE_DATA_RESPONSE,
@@ -322,6 +325,74 @@ class TestCore:  # pylint: disable=too-many-public-methods
         )
         assert device.device_name == get_field_value(
             GET_DEVICE_RESPONSE, "device")
+
+    async def test_get_device_with_fan(self, auth: Auth, core_test_object: CoreTestObject):
+        """Test parsing a connected fan accessory from a device."""
+        # Setup
+        core_test_object.expect_get_device(
+            access_token=TEST_ID_TOKEN, device_serial=TEST_DEVICE_ID_0
+        ).respond_with_json(GET_DEVICE_WITH_FAN_RESPONSE)
+        thermoworks_cloud = ThermoworksCloud(auth)
+
+        # Act
+        device = await thermoworks_cloud.get_device(TEST_DEVICE_ID_0)
+
+        # Assert
+        assert device.fan is not None
+        assert device.fan.connected is True
+        assert device.fan.connection is True
+        assert device.fan.fan_channel == "1"
+        assert device.fan.set_temp == 150
+        assert device.fan.state == 1
+        assert device.fan.state_name == "Blowing"
+
+    @pytest.mark.parametrize(
+        ("state", "state_name"),
+        [
+            (0, "Paused"),
+            (1, "Blowing"),
+            (2, "Pulsing"),
+            (99, None),
+        ],
+    )
+    async def test_get_device_fan_state_name(
+        self, auth: Auth, core_test_object: CoreTestObject, state: int, state_name: str
+    ):
+        """Test fan state names observed in the ThermoWorks app."""
+        # Setup
+        core_test_object.expect_get_device(
+            access_token=TEST_ID_TOKEN, device_serial=TEST_DEVICE_ID_0
+        ).respond_with_json(GET_DEVICE_FAN_STATE_RESPONSES[state])
+        thermoworks_cloud = ThermoworksCloud(auth)
+
+        # Act
+        device = await thermoworks_cloud.get_device(TEST_DEVICE_ID_0)
+
+        # Assert
+        assert device.fan is not None
+        assert device.fan.state_name == state_name
+
+    async def test_get_device_with_disconnected_fan(
+        self, auth: Auth, core_test_object: CoreTestObject
+    ):
+        """Test parsing a fan accessory when it is present but disconnected."""
+        # Setup
+        core_test_object.expect_get_device(
+            access_token=TEST_ID_TOKEN, device_serial=TEST_DEVICE_ID_0
+        ).respond_with_json(GET_DEVICE_WITH_DISCONNECTED_FAN_RESPONSE)
+        thermoworks_cloud = ThermoworksCloud(auth)
+
+        # Act
+        device = await thermoworks_cloud.get_device(TEST_DEVICE_ID_0)
+
+        # Assert
+        assert device.fan is not None
+        assert device.fan.connected is False
+        assert device.fan.connection is False
+        assert device.fan.fan_channel == "1"
+        assert device.fan.set_temp is None
+        assert device.fan.state is None
+        assert device.fan.state_name is None
 
     async def test_get_device_4xx_throws(
         self, auth: Auth, core_test_object: CoreTestObject
