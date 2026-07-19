@@ -5,7 +5,11 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 import pytest
 
-from tests.test_data import GET_DEVICE_CHANNEL_RESPONSE_INT, GET_DEVICE_CHANNEL_RESPONSE_HUMIDITY
+from tests.test_data import (
+    GET_DEVICE_CHANNEL_RESPONSE_INT,
+    GET_DEVICE_CHANNEL_RESPONSE_HUMIDITY,
+    GET_RFX_AIR_PROBE_CHANNEL_RESPONSE,
+)
 from tests.core_test_object import CoreTestObject
 from tests.test_data import (
     TEST_DEVICE_ID_0,
@@ -653,6 +657,45 @@ class TestCore:  # pylint: disable=too-many-public-methods
         assert channel.maximum is not None
         assert channel.maximum.reading.value == 91.26999999999998
         assert channel.maximum.reading.units == "H"
+
+    async def test_get_rfx_air_probe_channel_alarms(
+        self, auth: Auth, core_test_object: CoreTestObject
+    ):
+        """Test parsing RFX Air Probe alarms."""
+        # Setup
+        test_device_serial = "test_device_serial"
+        test_device_channel = "1"
+        core_test_object.expect_get_device_channel(
+            access_token=TEST_ID_TOKEN,
+            device_serial=test_device_serial,
+            channel=test_device_channel,
+        ).respond_with_json(GET_RFX_AIR_PROBE_CHANNEL_RESPONSE)
+        thermoworks_cloud = ThermoworksCloud(auth)
+
+        # Act
+        channel = await thermoworks_cloud.get_device_channel(
+            test_device_serial, test_device_channel
+        )
+
+        # Assert
+        assert channel.type == "Pro-Series"
+        assert channel.label == "Grid Temperature"
+        assert channel.status == "LOW"
+        assert channel.alarm_high is not None
+        assert channel.alarm_high.enabled is True
+        assert channel.alarm_high.alarming is False
+        assert channel.alarm_high.value == 175
+        assert channel.alarm_high.units == "F"
+        assert channel.alarm_low is not None
+        assert channel.alarm_low.enabled is True
+        assert channel.alarm_low.alarming is True
+        assert channel.alarm_low.value == 125
+        assert channel.alarm_low.units == "F"
+        assert channel.additional_properties is not None
+        assert (
+            channel.additional_properties["estimatedAlarmStatus"]
+            == "Alarm needs to be set to calculate estimated time"
+        )
 
 
     async def test_get_device_channel_4xx_throws(
