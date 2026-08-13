@@ -1,5 +1,6 @@
 """Test data to be used with mocks"""
 
+from copy import deepcopy
 import json
 
 # Paths used by the AuthFactory to setup an authentication object
@@ -352,6 +353,59 @@ GET_DEVICE_RESPONSE = json.loads(
 }"""
     % (TEST_DEVICE_ID_0, TEST_DEVICE_ID_0, TEST_DEVICE_ID_0, TEST_DEVICE_ID_0)
 )
+
+
+def _device_response_with_fan(fan_fields: dict, device_type: str = "datalogger") -> dict:
+    """Return a device response containing fan accessory data."""
+    response = deepcopy(GET_DEVICE_RESPONSE)
+    response["fields"]["type"] = {"stringValue": device_type}
+    response["fields"]["fan"] = {
+        "mapValue": {
+            "fields": fan_fields
+        }
+    }
+    return response
+
+
+GET_DEVICE_WITH_FAN_RESPONSE = _device_response_with_fan(
+    {
+        "connected": {"booleanValue": True},
+        "connection": {"booleanValue": True},
+        "fan_channel": {"stringValue": "1"},
+        "setTemp": {"integerValue": "150"},
+        "state": {"integerValue": "1"},
+    },
+    device_type="rfx",
+)
+
+GET_DEVICE_WITH_DISCONNECTED_FAN_RESPONSE = _device_response_with_fan(
+    {
+        "connected": {"booleanValue": False},
+        "connection": {"booleanValue": False},
+        "fan_channel": {"stringValue": "1"},
+    }
+)
+
+GET_DEVICE_FAN_STATE_RESPONSES = {
+    state: _device_response_with_fan(
+        {
+            "connected": {"booleanValue": True},
+            "state": {"integerValue": str(state)},
+        }
+    )
+    for state in (0, 1, 2, 99)
+}
+
+
+GET_DEVICE_WITH_GATEWAY_RSSI_RESPONSE = deepcopy(GET_DEVICE_RESPONSE)
+GET_DEVICE_WITH_GATEWAY_RSSI_RESPONSE["fields"]["type"] = {"stringValue": "rfx"}
+GET_DEVICE_WITH_GATEWAY_RSSI_RESPONSE["fields"]["device"] = {
+    "stringValue": "rfx meat"
+}
+GET_DEVICE_WITH_GATEWAY_RSSI_RESPONSE["fields"]["gatewayRSSI"] = {
+    "stringValue": "-55"
+}
+
 
 # Actual response value structure
 GET_DEVICE_CHANNEL_RESPONSE = json.loads(
@@ -708,6 +762,36 @@ GET_DEVICE_CHANNEL_RESPONSE_INT = json.loads(
 }"""
 )
 
+GET_RFX_AIR_PROBE_CHANNEL_RESPONSE = deepcopy(GET_DEVICE_CHANNEL_RESPONSE)
+GET_RFX_AIR_PROBE_CHANNEL_RESPONSE["fields"].update({
+    "lastTelemetrySaved": {"timestampValue": "2026-07-16T15:09:07.706Z"},
+    "value": {"doubleValue": 73.0999984741211},
+    "calibration": {"integerValue": "0"},
+    "enabled": {"booleanValue": True},
+    "estimatedAlarmStatus": {
+        "stringValue": "Alarm needs to be set to calculate estimated time"
+    },
+    "showRateOfChange": {"booleanValue": True},
+    "status": {"stringValue": "LOW"},
+    "type": {"stringValue": "Pro-Series"},
+    "label": {"stringValue": "Grid Temperature"},
+    "lastSeen": {"timestampValue": "2026-07-16T15:09:08.361Z"},
+})
+GET_RFX_AIR_PROBE_CHANNEL_RESPONSE["fields"]["alarmHigh"]["mapValue"]["fields"].update({
+    "value": {"integerValue": "175"},
+    "alarming": {"booleanValue": False},
+})
+GET_RFX_AIR_PROBE_CHANNEL_RESPONSE["fields"]["alarmLow"]["mapValue"]["fields"].update({
+    "value": {"integerValue": "125"},
+    "alarming": {"booleanValue": True},
+})
+GET_RFX_AIR_PROBE_CHANNEL_RESPONSE["fields"]["maximum"]["mapValue"]["fields"][
+    "reading"
+]["mapValue"]["fields"]["value"] = {"doubleValue": 76.8000030517578}
+GET_RFX_AIR_PROBE_CHANNEL_RESPONSE["fields"]["maximum"]["mapValue"]["fields"][
+    "dateReading"
+] = {"timestampValue": "2026-06-12T13:06:13.204Z"}
+
 # Response for get_devices query - using sanitized real-world format
 GET_DEVICES_RESPONSE = [
     {
@@ -774,3 +858,77 @@ GET_DEVICES_RESPONSE = [
         "readTime": "2023-01-01T00:00:00.000000000Z"
     }
 ]
+
+
+TEST_ARCHIVE_ID_0 = "test-archive-id-0"
+TEST_ARCHIVE_FILENAME = "archives/test-device/test-archive-id-0.json"
+
+GET_DEVICE_ARCHIVE_RESPONSE = {
+    "name": (
+        "projects/test-project-name/databases/(default)/documents/"
+        f"devices/{TEST_DEVICE_ID_0}/archive/{TEST_ARCHIVE_ID_0}"
+    ),
+    "fields": {
+        "type": {"stringValue": "auto"},
+        "label": {"stringValue": "Archive Session"},
+        "notes": {"stringValue": "archive notes"},
+        "filename": {"stringValue": TEST_ARCHIVE_FILENAME},
+        "deviceLabel": {"stringValue": "NODE"},
+        "public": {"booleanValue": False},
+        "publicLink": {"stringValue": "public-link-id"},
+        "count": {"integerValue": "2"},
+        "start": {"timestampValue": "2024-01-01T00:00:00.000Z"},
+        "end": {"timestampValue": "2024-01-01T01:00:00.000Z"},
+        "createdOn": {"timestampValue": "2024-01-01T03:00:00.000Z"},
+        "channels": {
+            "arrayValue": {
+                "values": [
+                    {
+                        "mapValue": {
+                            "fields": {
+                                "number": {"stringValue": "1"},
+                                "label": {"stringValue": "Channel 1"},
+                                "units": {"stringValue": "F"}
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "events": {"arrayValue": {"values": []}},
+        "deviceData": {
+            "mapValue": {
+                "fields": {
+                    "serial": {"stringValue": TEST_DEVICE_ID_0},
+                    "type": {"stringValue": "datalogger"}
+                }
+            }
+        }
+    },
+    "createTime": "2024-01-01T03:00:00.000Z",
+    "updateTime": "2024-01-01T03:00:00.000Z"
+}
+
+GET_DEVICE_ARCHIVES_RESPONSE = {
+    "documents": [GET_DEVICE_ARCHIVE_RESPONSE],
+    "nextPageToken": "next-page-token",
+}
+
+GET_DEVICE_ARCHIVE_DATA_RESPONSE = {
+    "serial": TEST_DEVICE_ID_0,
+    "type": "auto",
+    "label": "Archive Session",
+    "notes": "archive notes",
+    "deviceLabel": "NODE",
+    "start": "2024-01-01T00:00:00.000Z",
+    "end": "2024-01-01T01:00:00.000Z",
+    "channels": [
+        {"number": "1", "label": "Channel 1", "units": "F"}
+    ],
+    "events": [],
+    "deviceData": {"serial": TEST_DEVICE_ID_0, "type": "datalogger"},
+    "readings": [
+        ["1", 1704067200000, 32.1, "F"],
+        ["1", 1704070800000, 33.2, "F"]
+    ]
+}

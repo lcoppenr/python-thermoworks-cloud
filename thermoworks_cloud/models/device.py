@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional, Dict
+from typing import ClassVar, Optional, Dict
 
 from thermoworks_cloud.utils import parse_datetime, map_firestore_fields, parse_nested_object
 
@@ -18,21 +18,47 @@ class BigQueryInfo:
 
 
 @dataclass
-class FanInfo:
-    """FanInfo contains information about the fan for a Signals BBQ device."""
+class Fan:
+    """Fan contains information about a fan accessory connected to a device."""
 
-    set_temp: Optional[int] = field(
-        default=None, metadata={"api_name": "setTemp", "firestore_type": "integerValue", "converter": int})
-    state: Optional[int] = field(
-        default=None, metadata={"firestore_type": "integerValue", "converter": int})
+    STATE_NAMES: ClassVar[Dict[int, str]] = {
+        0: "Paused",
+        1: "Blowing",
+        2: "Pulsing",
+    }
+
     connected: Optional[bool] = field(
         default=None, metadata={"firestore_type": "booleanValue"})
     connection: Optional[bool] = field(
         default=None, metadata={"firestore_type": "booleanValue"})
+    fan_channel: Optional[str] = field(
+        default=None,
+        metadata={"api_name": "fan_channel", "firestore_type": "stringValue"},
+    )
+    set_temp: Optional[int] = field(
+        default=None,
+        metadata={
+            "api_name": "setTemp",
+            "firestore_type": "integerValue",
+            "converter": int,
+        },
+    )
+    state: Optional[int] = field(
+        default=None, metadata={"firestore_type": "integerValue", "converter": int})
+    # Fork-only: retained from FanInfo, upstream's Fan lacks these.
     alarm: Optional[bool] = field(
         default=None, metadata={"firestore_type": "booleanValue"})
     alarming: Optional[bool] = field(
         default=None, metadata={"firestore_type": "booleanValue"})
+
+    additional_properties: Optional[Dict] = None
+
+    @property
+    def state_name(self) -> Optional[str]:
+        """Return the ThermoWorks app name for the current fan state."""
+        if self.state is None:
+            return None
+        return self.STATE_NAMES.get(self.state)
 
 
 @dataclass
@@ -71,6 +97,7 @@ class Device:  # pylint: disable=too-many-instance-attributes
         default=None, metadata={"firestore_type": "stringValue"})
     big_query_info: Optional[BigQueryInfo] = field(
         default=None, metadata={"api_name": "bigQuery"})
+    fan: Optional[Fan] = None
     battery: Optional[int] = field(
         default=None,
         metadata={
@@ -83,6 +110,14 @@ class Device:  # pylint: disable=too-many-instance-attributes
         metadata={
             "api_name": "wifi_stength",
             "firestore_type": "integerValue", "converter": int
+        }
+    )
+    gateway_rssi: Optional[int] = field(
+        default=None,
+        metadata={
+            "api_name": "gatewayRSSI",
+            "firestore_type": ["integerValue", "stringValue"],
+            "converter": int,
         }
     )
     recording_interval_in_seconds: Optional[int] = field(
@@ -113,7 +148,6 @@ class Device:  # pylint: disable=too-many-instance-attributes
     last_bluetooth_connection: Optional[datetime] = field(
         default=None,
         metadata={"firestore_type": "timestampValue", "converter": parse_datetime})
-    fan: Optional[FanInfo] = None
     session_start: Optional[datetime] = field(
         default=None,
         metadata={"api_name": "sessionStart", "firestore_type": "timestampValue", "converter": parse_datetime})
@@ -132,6 +166,11 @@ class Device:  # pylint: disable=too-many-instance-attributes
     # Dictionary to store any additional properties not explicitly defined
     additional_properties: Optional[Dict] = None
 
+    @property
+    def signal_strength(self) -> Optional[int]:
+        """Return gateway RSSI when present, otherwise Wi-Fi strength, in dBm."""
+        return self.gateway_rssi if self.gateway_rssi is not None else self.wifi_strength
+
 
 def _document_to_device(document: dict) -> Device:
     """Convert a Firestore Document object into a Device object."""
@@ -149,8 +188,8 @@ def _document_to_device(document: dict) -> Device:
     # Handle Fan info separately since it's a nested object
     if "fan" in fields and "mapValue" in fields["fan"]:
         try:
-            device.fan = parse_nested_object(fields["fan"]["mapValue"], FanInfo)
-        except (KeyError, TypeError):
+            device.fan = parse_nested_object(fields["fan"]["mapValue"], Fan)
+        except (KeyError, TypeError, ValueError):
             device.fan = None
 
     # Document timestamps
